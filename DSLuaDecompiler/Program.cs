@@ -50,7 +50,7 @@ namespace luadec
                     return;
                 }
 
-                Directory.CreateDirectory(Path.GetDirectoryName(outfilename));
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outfilename)));
 
 #if DEBUG
                 if (System.Diagnostics.Debugger.IsAttached)
