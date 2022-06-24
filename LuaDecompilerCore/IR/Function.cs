@@ -1291,7 +1291,7 @@ namespace luadec.IR
                             if (use.DefiningInstruction != null &&
                                 use.DefiningInstruction is Assignment a &&
                                 a.Left.Count() == 1 && a.LocalAssignments == null &&
-                                ((use.UseCount == 1 && !definitelyLocal.Contains(use)) || a.PropagateAlways) &&
+                                (((use.UseCount == 1 || a.Right is Constant) && !definitelyLocal.Contains(use)) || a.PropagateAlways) &&
                                 !a.Left[0].Identifier.IsClosureBound)
                             {
                                 // Don't substitute if this use's define was defined before the code gen for the function call even began
