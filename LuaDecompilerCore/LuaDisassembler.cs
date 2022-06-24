@@ -1032,7 +1032,7 @@ namespace luadec
             irfun.DetectLoopConditionals();
             irfun.DetectTwoWayConditionals();
             irfun.SimplifyIfElseFollowChain();
-            irfun.EliminateDeadAssignments(true);
+            irfun.EliminateDeadAssignments(false);
             //irfun.PerformExpressionPropagation(false);
             irfun.VerifyLivenessNoInterference();
 
@@ -1540,7 +1540,7 @@ namespace luadec
             irfun.DetectLoopConditionals();
             irfun.DetectTwoWayConditionals();
             irfun.SimplifyIfElseFollowChain();
-            irfun.EliminateDeadAssignments(true);
+            irfun.EliminateDeadAssignments(false);
             irfun.PerformExpressionPropagation(false);
             irfun.VerifyLivenessNoInterference();
 
@@ -2196,7 +2196,7 @@ namespace luadec
             irfun.DetectLoopConditionals();
             irfun.DetectTwoWayConditionals();
             irfun.SimplifyIfElseFollowChain();
-            irfun.EliminateDeadAssignments(true);
+            irfun.EliminateDeadAssignments(false);
             irfun.PerformExpressionPropagation(false);
             //irfun.VerifyLivenessNoInterference();
 

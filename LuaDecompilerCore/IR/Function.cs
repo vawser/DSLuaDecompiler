@@ -1653,28 +1653,28 @@ namespace luadec.IR
                     }
                     phiToRemove.ForEach(x => b.PhiFunctions.Remove(x.OriginalIdentifier));
 
-                    // Eliminate unused assignments
-                    var toRemove = new List<IInstruction>();
-                    foreach (var inst in b.Instructions)
+                    if (!phiOnly)
                     {
-                        var defs = inst.GetDefines(true);
-                        if (defs.Count() == 1 && usageCounts[defs.First()] == 0)
+                        // Eliminate unused assignments
+                        var toRemove = new List<IInstruction>();
+                        foreach (var inst in b.Instructions)
                         {
-                            if (inst is Assignment a && a.Right is FunctionCall && !phiOnly)
+                            var defs = inst.GetDefines(true);
+                            if (defs.Count() == 1 && usageCounts[defs.First()] == 0)
                             {
-                                a.Left.Clear();
-                            }
-                            else
-                            {
-                                if (!phiOnly)
+                                changed = true;
+                                if (inst is Assignment a && a.Right is FunctionCall)
                                 {
-                                    changed = true;
+                                    a.Left.Clear();
+                                }
+                                else
+                                {
                                     toRemove.Add(inst);
                                 }
                             }
                         }
+                        toRemove.ForEach(x => b.Instructions.Remove(x));
                     }
-                    toRemove.ForEach(x => b.Instructions.Remove(x));
                 }
             }
         }
@@ -2743,7 +2743,7 @@ namespace luadec.IR
                     if (entry.Value.Count() > 1 && phiinduced.Contains(entry.Key))
                     {
                         // Multiple incoming declarations that all have the same use need to be merged
-                        var assn = new Assignment(entry.Key, null);
+                        var assn = new Assignment(entry.Key, new Constant(Constant.ConstantType.ConstNil, -1));
                         assn.IsLocalDeclaration = true;
                         b.Instructions.Insert(b.Instructions.Count() - 1, assn);
                         declaredAssignments.Add(entry.Key, new List<Assignment>() { assn });
