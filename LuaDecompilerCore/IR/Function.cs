@@ -1035,7 +1035,8 @@ namespace luadec.IR
         }
 
         private HashSet<Identifier> definitelyLocal = new HashSet<Identifier>();
-        // Given the IR is in SSA form, this does expression propagation/substitution
+
+        // Given the IR is in SSA form, this does expression propagation/substitution.
         public void PerformExpressionPropagation(bool firstpass)
         {
             // Lua function calls (and expressions in general have their bytecode generated recursively. This means for example when doing a function call,
@@ -1045,7 +1046,9 @@ namespace luadec.IR
             {
                 foreach (var b in BlockList)
                 {
+                    // The pre-propagation instruction index at which each identifier was last assigned in this block.
                     var defines = new Dictionary<Identifier, int>();
+                    // The set of identifiers assigned by self ops in this block.
                     var selfs = new HashSet<Identifier>();
                     for (int i = 0; i < b.Instructions.Count(); i++)
                     {
@@ -1262,7 +1265,8 @@ namespace luadec.IR
                 }
                 return firstTempDef;
             }
-            if (firstpass)
+
+            if (firstpass && AnalysisOpts.PreserveOriginalLocals)
             {
                 var argregs = new HashSet<Identifier>();
                 foreach (var i in Parameters)

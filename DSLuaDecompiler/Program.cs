@@ -35,6 +35,10 @@ namespace luadec
                         outfilename = args[arg + 1];
                         arg += 2;
                         continue;
+                    } else if (args[arg] == "--ignore-original-locals") {
+                        AnalysisOpts.PreserveOriginalLocals = false;
+                        arg++;
+                        continue;
                     }
                     infilename = args[arg];
                     if (outfilename == null)

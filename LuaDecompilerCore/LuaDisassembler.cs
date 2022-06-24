@@ -1033,7 +1033,7 @@ namespace luadec
             irfun.DetectTwoWayConditionals();
             irfun.SimplifyIfElseFollowChain();
             irfun.EliminateDeadAssignments(true);
-            //irfun.PerformExpressionPropagation();
+            //irfun.PerformExpressionPropagation(false);
             irfun.VerifyLivenessNoInterference();
 
             // Convert out of SSA and rename variables
