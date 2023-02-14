@@ -2838,84 +2838,82 @@ namespace luadec.IR
                         Identifier loopvar = (loopCondition.Left as IdentifierReference).Identifier;
                         var incinst = node.Instructions[node.Instructions.Count() - 2];
 
+                        // Hack used to allow c9997 to decompile
+                        bool use_c9997_hack = false;
 
-                        if ((incinst as Assignment).Right.ToString() == "nil")
+                        if (use_c9997_hack && (incinst as Assignment).Right.ToString() == "nil")
                         {
-                            Console.WriteLine($"(incinst as Assignment).Right - {(incinst as Assignment).Right}");
 
-                            Expression temp = new Constant((ulong)1, 999);
-
-                            (incinst as Assignment).Right = temp;
-
-                            Console.WriteLine($"(incinst as Assignment).Right - {(incinst as Assignment).Right}");
-                        }
-                       
-                        nfor.Increment = ((incinst as Assignment).Right as BinOp).Right;
-
-                        // Remove the sub instruction at the end
-                        // loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
-
-                        // Extract the step variable definition
-                        if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 2) is Assignment incassn)
-                        {
-                            nfor.Increment = incassn.Right;
-                            if (incassn.IsLocalDeclaration)
-                            {
-                                relocalize.Add(incassn.Left[0].Identifier);
-                            }
-                            loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
-                        }
-
-                        // Extract the limit variable definition
-                        if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 2) is Assignment limitassn)
-                        {
-                            nfor.Limit = limitassn.Right;
-                            if (limitassn.IsLocalDeclaration)
-                            {
-                                relocalize.Add(limitassn.Left[0].Identifier);
-                            }
-                            loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
-                        }
-
-                        // Extract the initializer variable definition
-                        if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 2) is Assignment initassn)
-                        {
-                            nfor.Initial = initassn;
-                            if (initassn.IsLocalDeclaration)
-                            {
-                                relocalize.Add(initassn.Left[0].Identifier);
-                                RenameLoopVariable(node, initassn.Left[0].Identifier);
-                            }
-                            loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
-                        }
-
-                        nfor.Body = node.Successors[1];
-                        nfor.Body.MarkCodegened(DebugID);
-                        if (!usedFollows.Contains(node.LoopFollow))
-                        {
-                            nfor.Follow = node.LoopFollow;
-                            usedFollows.Add(node.LoopFollow);
-                            node.LoopFollow.MarkCodegened(DebugID);
-                        }
-                        if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 1) is Jump)
-                        {
-                            loopInitializer.Instructions[loopInitializer.Instructions.Count() - 1] = nfor;
                         }
                         else
                         {
-                            loopInitializer.Instructions.Add(nfor);
-                        }
-                        node.MarkCodegened(DebugID);
-                        // The head might be the follow of an if statement, so do this to not codegen it
-                        usedFollows.Add(node);
+                            nfor.Increment = ((incinst as Assignment).Right as BinOp).Right;
 
+                            // Remove the sub instruction at the end
+                            // loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
 
-                        // Remove any jump instructions from the latches if they exist
-                        foreach (var latch in node.LoopLatches)
-                        {
-                            if (latch.Instructions.Count > 0 && latch.Instructions.Last() is Jump jmp2 && !jmp2.Conditional && jmp2.BBDest == node)
+                            // Extract the step variable definition
+                            if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 2) is Assignment incassn)
                             {
-                                latch.Instructions.RemoveAt(latch.Instructions.Count - 1);
+                                nfor.Increment = incassn.Right;
+                                if (incassn.IsLocalDeclaration)
+                                {
+                                    relocalize.Add(incassn.Left[0].Identifier);
+                                }
+                                loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
+                            }
+
+                            // Extract the limit variable definition
+                            if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 2) is Assignment limitassn)
+                            {
+                                nfor.Limit = limitassn.Right;
+                                if (limitassn.IsLocalDeclaration)
+                                {
+                                    relocalize.Add(limitassn.Left[0].Identifier);
+                                }
+                                loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
+                            }
+
+                            // Extract the initializer variable definition
+                            if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 2) is Assignment initassn)
+                            {
+                                nfor.Initial = initassn;
+                                if (initassn.IsLocalDeclaration)
+                                {
+                                    relocalize.Add(initassn.Left[0].Identifier);
+                                    RenameLoopVariable(node, initassn.Left[0].Identifier);
+                                }
+                                loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
+                            }
+
+                            nfor.Body = node.Successors[1];
+                            nfor.Body.MarkCodegened(DebugID);
+                            if (!usedFollows.Contains(node.LoopFollow))
+                            {
+                                nfor.Follow = node.LoopFollow;
+                                usedFollows.Add(node.LoopFollow);
+                                node.LoopFollow.MarkCodegened(DebugID);
+                            }
+                            if (loopInitializer.GetInstruction(loopInitializer.Instructions.Count - 1) is Jump)
+                            {
+                                loopInitializer.Instructions[loopInitializer.Instructions.Count() - 1] = nfor;
+                            }
+                            else
+                            {
+                                loopInitializer.Instructions.Add(nfor);
+                            }
+                            node.MarkCodegened(DebugID);
+                            // The head might be the follow of an if statement, so do this to not codegen it
+                            usedFollows.Add(node);
+
+
+                            // Remove any jump instructions from the latches if they exist
+                            foreach (var latch in node.LoopLatches)
+                            {
+                                if (latch.Instructions.Count > 0 && latch.Instructions.Last() is Jump jmp2 && !jmp2.Conditional && jmp2.BBDest == node)
+                                {
+                                    latch.Instructions.RemoveAt(latch.Instructions.Count - 1);
+                                }
                             }
                         }
                     }
