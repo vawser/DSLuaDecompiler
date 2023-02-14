@@ -594,23 +594,19 @@ namespace luadec.IR
         /// <param name="table"></param>
         public void ResolveIndeterminantArguments(SymbolTable table)
         {
-#if DEBUG_INDETERMINATE
             Console.Write(string.Join(", ", Parameters.Select(p => $"{p.VType.ToString()} {p.Name}")));
             Console.WriteLine(")");
-#endif
             // This analysis should not need any intrablock analysis
             foreach (var b in BlockList)
             {
-#if DEBUG_INDETERMINATE
                 Console.WriteLine($"    {b.GetName()}:");
-#endif
+
                 Identifier lastIndeterminantRet = null;
                 foreach (var i in b.Instructions)
                 {
-#if DEBUG_INDETERMINATE
                     if (i.ToString().Length > 0)
                         Console.WriteLine($"        {i.ToString()}");
-#endif
+
                     if (i is Assignment a2 && a2.Right is FunctionCall fc2 && fc2.IsIndeterminantArgumentCount)
                     {
                         if (lastIndeterminantRet == null)
@@ -640,9 +636,8 @@ namespace luadec.IR
                     }
                 }
             }
-#if DEBUG_INDETERMINATE
+
             Console.WriteLine("end");
-#endif
         }
 
         public void ResolveVarargListAssignment()
@@ -2832,26 +2827,30 @@ namespace luadec.IR
                     var loopInitializer = node.Predecessors.First(x => !node.LoopLatches.Contains(x));
 
                     // Match a numeric for
-                    if (node.Instructions.Last() is Jump loopJump && loopJump.Condition is BinOp loopCondition && loopCondition.Operation == BinOp.OperationType.OpLoopCompare)
+                    if (node.Instructions.Last() is Jump loopJump &&
+                        loopJump.Condition is BinOp loopCondition &&
+                        loopCondition.Operation == BinOp.OperationType.OpLoopCompare
+                    )
                     {
 
                         var nfor = new NumericFor();
                         nfor.Limit = loopCondition.Right;
                         Identifier loopvar = (loopCondition.Left as IdentifierReference).Identifier;
                         var incinst = node.Instructions[node.Instructions.Count() - 2];
-                        nfor.Increment = ((incinst as Assignment).Right as BinOp).Right;
 
-                        // Search the predecessor block for the initial assignments (i.e. the definition)
-                        /*for (int i = loopInitializer.Instructions.Count() - 1; i >= 0; i--)
+
+                        if ((incinst as Assignment).Right.ToString() == "nil")
                         {
-                            if (loopInitializer.Instructions[i] is Assignment a && a.GetDefines(true).Contains(loopvar))
-                            {
-                                nfor.Initial = a;
-                                //if (!lua51)
-                                loopInitializer.Instructions.RemoveAt(i);
-                                break;
-                            }
-                        }*/
+                            Console.WriteLine($"(incinst as Assignment).Right - {(incinst as Assignment).Right}");
+
+                            Expression temp = new Constant((ulong)1, 999);
+
+                            (incinst as Assignment).Right = temp;
+
+                            Console.WriteLine($"(incinst as Assignment).Right - {(incinst as Assignment).Right}");
+                        }
+                       
+                        nfor.Increment = ((incinst as Assignment).Right as BinOp).Right;
 
                         // Remove the sub instruction at the end
                         // loopInitializer.Instructions.RemoveAt(loopInitializer.Instructions.Count - 2);
@@ -3642,9 +3641,11 @@ namespace luadec.IR
 
         public void AnnotateEnvActFunctions()
         {
+            // ENV
             var EnvJapaneseMap = new Dictionary<string, string>();
             var EnvIDMap = new Dictionary<int, string>();
-            var nameIdentifierMap = new Dictionary<string, Identifier>();
+            var EnvNameIdentifierMap = new Dictionary<string, Identifier>();
+
             foreach (var env in Annotations.ESDFunctions.ESDEnvs)
             {
                 EnvJapaneseMap.Add(env.JapaneseName, env.EnglishEnum);
@@ -3652,31 +3653,75 @@ namespace luadec.IR
                 var id = new Identifier();
                 id.Name = env.EnglishEnum;
                 id.IType = Identifier.IdentifierType.Global;
-                nameIdentifierMap.Add(env.EnglishEnum, id);
+                EnvNameIdentifierMap.Add(env.EnglishEnum, id);
+                //Console.WriteLine(env.EnglishEnum + " = " + env.ID);
             }
 
+            // ACT
+            var ActJapaneseMap = new Dictionary<string, string>();
+            var ActIDMap = new Dictionary<int, string>();
+            var ActNameIdentifierMap = new Dictionary<string, Identifier>();
+
+            foreach (var act in Annotations.ESDFunctions.ESDActs)
+            {
+                ActJapaneseMap.Add(act.JapaneseName, act.EnglishEnum);
+                ActIDMap.Add(act.ID, act.EnglishEnum);
+                var id = new Identifier();
+                id.Name = act.EnglishEnum;
+                id.IType = Identifier.IdentifierType.Global;
+                ActNameIdentifierMap.Add(act.EnglishEnum, id);
+                //Console.WriteLine(act.EnglishEnum + " = " + act.ID);
+            }
+
+            // Replace values in lua
             foreach (var b in BlockList)
             {
                 foreach (var i in b.Instructions)
                 {
                     foreach (var e in i.GetExpressions())
                     {
-                        if (e is FunctionCall f && f.Function is IdentifierReference ir && ir.Identifier.Name == "env")
+                        if (e is FunctionCall f && f.Function is IdentifierReference ir)
                         {
-                            if (f.Args.Count() > 0)
+                            // ENV
+                            if (ir.Identifier.Name == "env")
                             {
-                                if (f.Args[0] is Constant c1 && c1.ConstType == Constant.ConstantType.ConstString)
+                                if (f.Args.Count() > 0)
                                 {
-                                    if (EnvJapaneseMap.ContainsKey(c1.String))
+                                    if (f.Args[0] is Constant c1 && c1.ConstType == Constant.ConstantType.ConstString)
                                     {
-                                        f.Args[0] = new IdentifierReference(nameIdentifierMap[EnvJapaneseMap[c1.String]]);
+                                        if (EnvJapaneseMap.ContainsKey(c1.String))
+                                        {
+                                            f.Args[0] = new IdentifierReference(EnvNameIdentifierMap[EnvJapaneseMap[c1.String]]);
+                                        }
+                                    }
+                                    else if (f.Args[0] is Constant c2 && c2.ConstType == Constant.ConstantType.ConstNumber)
+                                    {
+                                        if (EnvIDMap.ContainsKey((int)c2.Number))
+                                        {
+                                            f.Args[0] = new IdentifierReference(EnvNameIdentifierMap[EnvIDMap[(int)c2.Number]]);
+                                        }
                                     }
                                 }
-                                else if (f.Args[0] is Constant c2 && c2.ConstType == Constant.ConstantType.ConstNumber)
+                            }
+
+                            // ACT
+                            if (ir.Identifier.Name == "act")
+                            {
+                                if (f.Args.Count() > 0)
                                 {
-                                    if (EnvIDMap.ContainsKey((int)c2.Number))
+                                    if (f.Args[0] is Constant c1 && c1.ConstType == Constant.ConstantType.ConstString)
                                     {
-                                        f.Args[0] = new IdentifierReference(nameIdentifierMap[EnvIDMap[(int)c2.Number]]);
+                                        if (ActJapaneseMap.ContainsKey(c1.String))
+                                        {
+                                            f.Args[0] = new IdentifierReference(ActNameIdentifierMap[ActJapaneseMap[c1.String]]);
+                                        }
+                                    }
+                                    else if (f.Args[0] is Constant c2 && c2.ConstType == Constant.ConstantType.ConstNumber)
+                                    {
+                                        if (ActIDMap.ContainsKey((int)c2.Number))
+                                        {
+                                            f.Args[0] = new IdentifierReference(ActNameIdentifierMap[ActIDMap[(int)c2.Number]]);
+                                        }
                                     }
                                 }
                             }

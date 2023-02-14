@@ -2176,10 +2176,10 @@ namespace luadec
 
              // Control flow graph construction and SSA conversion
             irfun.ConstructControlFlowGraph();
-#if DEBUG_INDETERMINATE
+
             Console.WriteLine("");
             Console.Write($"function {fun.Name}(");
-#endif
+
             irfun.ResolveIndeterminantArguments(SymbolTable);
             irfun.CompleteLua51Loops();
             irfun.ConvertToSSA(SymbolTable.GetAllRegistersInScope());
